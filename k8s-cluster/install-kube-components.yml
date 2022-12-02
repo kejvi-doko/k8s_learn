@@ -1,0 +1,141 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: create Docker config directory
+      file: path=/etc/docker state=directory
+
+    - name: changing Docker to systemd driver
+      copy:
+        dest: "/etc/docker/daemon.json"
+        content: |
+          {
+          "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+
+    - name: install Docker Dependencies
+      apt:
+        name: ca-certificates, curl, gnupg, lsb-release
+        state: present
+        update_cache: true
+
+    - name: create keyring directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        recurse: yes
+
+    - name: add docker apt key
+      apt_key:
+        keyring: /etc/apt/keyrings/docker.gpg
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: add repository for docker
+      apt_repository:
+        repo: deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable
+        filename: /etc/apt/sources.list.d/docker.list
+        state: present
+        update_cache: true
+
+    - name: install Docker
+      apt:
+        name: docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: docker post group installation
+      group:
+        name: docker
+        state: present
+
+    - name: docker post user installation
+      user:
+        name: '{{ item }}'
+        groups: docker
+        append: true
+      loop:
+        - ubuntu
+        - parallels
+
+    - name: install APT Transport HTTPS
+      apt:
+        name: apt-transport-https
+        state: present
+
+    - name: add kubernetes apt-key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        keyring: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+        state: present
+
+    - name: add Kubernetes APT repository
+      apt_repository:
+        repo: deb [arch=arm64 signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        update_cache: true
+        filename: /etc/apt/sources.list.d/kubernetes.list
+
+    - name: install kubelet
+      apt:
+        name: kubelet
+        state: present
+        update_cache: true
+
+    - name: install kubeadm
+      apt:
+        name: kubeadm
+        state: present
+
+- hosts: masters
+  become: yes
+  tasks:
+    - name: install kubectl
+      apt:
+        name: kubectl
+        state: present
+        force: yes
+#
+#    - name: add Kubernetes apt-key
+#      become: true
+#      shell:
+#        cmd: |
+#          curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+#          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+#
+#    - name: Setup Repository
+#      become: true
+#      shell:
+#        cmd: |
+#          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+#
+#    - name: install Docker
+#      apt:
+#        name: docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin
+#        state: present
+#        update_cache: true
+#
+#    - name: add Kubernetes' APT repository
+#      apt_repository:
+#        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+#        state: present
+#        filename: 'kubernetes'
+#
+#    - name: install kubelet
+#      apt:
+#        name: kubelet=1.23.4-00
+#        state: present
+#        update_cache: true
+#
+#    - name: install kubeadm
+#      apt:
+#        name: kubeadm=1.23.4-00
+#        state: present
+#
+#- hosts: master
+#  become: yes
+#  tasks:
+#    - name: install kubectl
+#      apt:
+#        name: kubectl=1.23.4-00
+#        state: present
+#        force: yes

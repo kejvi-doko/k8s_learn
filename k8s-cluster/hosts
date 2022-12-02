@@ -1,0 +1,10 @@
+[masters]
+master ansible_host=k8s-01
+
+[workers]
+worker1 ansible_host=k8s-02
+worker2 ansible_host=k8s-03
+worker3 ansible_host=k8s-04
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
