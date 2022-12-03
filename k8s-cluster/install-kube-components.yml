@@ -77,65 +77,34 @@
 
     - name: install kubelet
       apt:
-        name: kubelet
+        name: kubelet=1.24.3-00
         state: present
         update_cache: true
 
     - name: install kubeadm
       apt:
-        name: kubeadm
+        name: kubeadm=1.24.3-00
         state: present
+
+    - name: generate containerd config
+      shell:
+        cmd: |
+          sudo containerd config default | sudo tee /etc/containerd/config.toml
+          sudo sed -i 's/            SystemdCgroup = false/            SystemdCgroup = true/' /etc/containerd/config.toml
+          sudo systemctl restart containerd
+
+    - name: register containerd on startup
+      shell:
+        cmd: |
+          sudo systemctl enable kubelet.service
+          sudo systemctl enable containerd.service
+
 
 - hosts: masters
   become: yes
   tasks:
     - name: install kubectl
       apt:
-        name: kubectl
+        name: kubectl=1.24.3-00
         state: present
         force: yes
-#
-#    - name: add Kubernetes apt-key
-#      become: true
-#      shell:
-#        cmd: |
-#          curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-#          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-#
-#    - name: Setup Repository
-#      become: true
-#      shell:
-#        cmd: |
-#          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-#
-#    - name: install Docker
-#      apt:
-#        name: docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin
-#        state: present
-#        update_cache: true
-#
-#    - name: add Kubernetes' APT repository
-#      apt_repository:
-#        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
-#        state: present
-#        filename: 'kubernetes'
-#
-#    - name: install kubelet
-#      apt:
-#        name: kubelet=1.23.4-00
-#        state: present
-#        update_cache: true
-#
-#    - name: install kubeadm
-#      apt:
-#        name: kubeadm=1.23.4-00
-#        state: present
-#
-#- hosts: master
-#  become: yes
-#  tasks:
-#    - name: install kubectl
-#      apt:
-#        name: kubectl=1.23.4-00
-#        state: present
-#        force: yes
