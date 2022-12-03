@@ -8,8 +8,19 @@
       with_items:
         - acl
 
+    - name: set ipv4
+      shell:
+        cmd: |
+          sudo echo 1 > /proc/sys/net/ipv4/ip_forward
+          touch ipv4.txt
+        chdir: $HOME
+        creates: ipv4.txt
+
+          
+
     - name: initialize the cluster
-      shell: kubeadm init --kubernetes-version v1.24.3  >> cluster_initialized.txt
+      become: yes
+      shell: sudo kubeadm init --kubernetes-version v1.24.3  >> cluster_initialized.txt
       args:
         chdir: $HOME
         creates: cluster_initialized.txt
@@ -28,3 +39,14 @@
         dest: /home/ubuntu/.kube/config
         remote_src: yes
         owner: ubuntu
+
+    - name: Install calico.yaml
+      become: yes
+      become_user: ubuntu
+      shell:
+        cmd: | 
+          wget https://docs.projectcalico.org/manifests/calico.yaml
+          kubectl apply -f calico.yaml
+        chdir: $HOME
+        creates: install_calico q.txt
+      
