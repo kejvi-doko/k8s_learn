@@ -1,52 +1,18 @@
 - hosts: masters
   become: yes
   tasks:
-    - name: Install required packaged
-      apt:
-        name: "{{ item }}"
-        state: present
-      with_items:
-        - acl
-
-    - name: set ipv4
-      shell:
-        cmd: |
-          sudo echo 1 > /proc/sys/net/ipv4/ip_forward
-          touch ipv4.txt
-        chdir: $HOME
-        creates: ipv4.txt
-
-          
-
-    - name: initialize the cluster
-      become: yes
-      shell: sudo kubeadm init --kubernetes-version v1.24.3  >> cluster_initialized.txt
+    - name: Initialize the cluster
+      shell: sudo kubeadm init --control-plane-endpoint={{hostvars[inventory_hostname]['ansible_default_ipv4']['address']}} >> cluster_initialized.txt
       args:
-        chdir: $HOME
+        chdir: /home/parallels
         creates: cluster_initialized.txt
 
     - name: create .kube directory
-      become: yes
-      become_user: ubuntu
-      file:
-        path: $HOME/.kube
-        state: directory
-        mode: 0755
-
-    - name: copy admin.conf to user's kube config
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: /home/ubuntu/.kube/config
-        remote_src: yes
-        owner: ubuntu
-
-    - name: Install calico.yaml
-      become: yes
-      become_user: ubuntu
       shell:
-        cmd: | 
-          wget https://docs.projectcalico.org/manifests/calico.yaml
-          kubectl apply -f calico.yaml
-        chdir: $HOME
-        creates: install_calico q.txt
-      
+        cmd: |
+          mkdir -p .kube
+          sudo cp -i /etc/kubernetes/admin.conf .kube/config
+          sudo chown $(id -u):$(id -g) .kube/config
+        chdir: /home/parallels
+        creates: .kube/config
+        

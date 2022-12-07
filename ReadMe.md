@@ -14,19 +14,19 @@ ssh-keygen -b 4096 -t rsa
 ## Intial Setup
 
 ```shell
-ansible-playbook -i k8s-cluster/hosts k8s-cluster/initial-setup.yml --extra-vars "ansible_sudo_pass=Hasenholf20999"
+ansible-playbook -i k8s-cluster/hosts k8s-cluster/initial-setup.yml --extra-vars "ansible_sudo_pass=111111"
 ```
 
 ```shell
-ansible-playbook -i k8s-cluster/hosts k8s-cluster/install-kube-components.yml --extra-vars "ansible_sudo_pass=Hasenholf20999"
+ansible-playbook -i k8s-cluster/hosts k8s-cluster/install-kube-components.yml --extra-vars "ansible_sudo_pass=111111"
 ```
 
 ```shell
-ansible-playbook -i k8s-cluster/hosts k8s-cluster/install-kube-prereq.yml --extra-vars "ansible_sudo_pass=Hasenholf20999"
+ansible-playbook -i k8s-cluster/hosts k8s-cluster/install-kube-prereq.yml --extra-vars "ansible_sudo_pass=111111"
 ```
 
 ```shell
-ansible-playbook -i k8s-cluster/hosts k8s-cluster/master.yml --extra-vars "ansible_sudo_pass=Hasenholf20999"
+ansible-playbook -i k8s-cluster/hosts k8s-cluster/master.yml --extra-vars "ansible_sudo_pass=111111"
 ```
 
 ```shell

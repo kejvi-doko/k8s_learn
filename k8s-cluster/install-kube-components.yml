@@ -1,112 +1,78 @@
 - hosts: all
   become: yes
   tasks:
-#    - name: create Docker config directory
-#      file: path=/etc/docker state=directory
-#
-#    - name: changing Docker to systemd driver
-#      copy:
-#        dest: "/etc/docker/daemon.json"
-#        content: |
-#          {
-#          "exec-opts": ["native.cgroupdriver=systemd"]
-#          }
+    - name: Set kernel parameters
+      shell:
+        cmd: |
+          cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+          overlay
+          br_netfilter
+          EOF
+          sudo modprobe overlay
+          sudo modprobe br_netfilter
+          cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-k8s.conf
+          net.bridge.bridge-nf-call-iptables = 1
+          net.ipv4.ip_forward = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          EOF
+          sudo sysctl --system >> kernel_parameter.txt
+        chdir: /home/parallels
+        creates: kernel_parameter.txt
 
-    - name: install Docker Dependencies
+    - name: Install containerd
       apt:
-        name: ca-certificates, curl, gnupg, lsb-release
+        name: "containerd"
         state: present
         update_cache: true
 
-    - name: create keyring directory
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        recurse: yes
+    - name: Configure Containerd
+      shell:
+        cmd: |
+          containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
+          touch containerd_configured.txt
+        chdir: /home/parallels
+        creates: containerd_configured.txt
 
-    - name: add docker apt key
-      apt_key:
-        keyring: /etc/apt/keyrings/docker.gpg
-        url: https://download.docker.com/linux/ubuntu/gpg
+
+
+    - name: Update Containerd config.toml file
+      lineinfile:
+        path: /etc/containerd/config.toml
         state: present
+        firstmatch: true
+        insertafter: '\boptions\b'
+        line: '            SystemdCgroup = true'
 
-    - name: add repository for docker
-      apt_repository:
-        repo: deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable
-        filename: /etc/apt/sources.list.d/docker.list
-        state: present
-        update_cache: true
+    - name: Restart and Enable Containerd
+      shell: |
+        sudo systemctl restart containerd
+        sudo systemctl enable containerd
 
-    - name: install Docker
+    - name: Install required packaged
       apt:
-        name: containerd
+        name: "{{ item }}"
         state: present
-        update_cache: true
+      with_items:
+        - gnupg
+        - gnupg2
+        - curl
+        - software-properties-common
 
-    - name: docker post group installation
-      group:
-        name: docker
-        state: present
-
-    - name: docker post user installation
-      user:
-        name: '{{ item }}'
-        groups: docker
-        append: true
-      loop:
-        - ubuntu
-        - parallels
-
-    - name: install APT Transport HTTPS
-      apt:
-        name: apt-transport-https
-        state: present
-
-    - name: add kubernetes apt-key
-      apt_key:
-        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-        keyring: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
-        state: present
+    - name: Install gpg key
+      shell: |
+        curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/cgoogle.gpg
 
     - name: add Kubernetes APT repository
       apt_repository:
-        repo: deb [arch=arm64 signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main
+        repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+
+    - name: Install Kubernetes Components
+      apt:
+        name: '{{ item }}'
         state: present
         update_cache: true
-        filename: /etc/apt/sources.list.d/kubernetes.list
-
-    - name: install kubelet
-      apt:
-        name: kubelet=1.24.3-00
-        state: present
-        update_cache: true
-
-    - name: install kubeadm
-      apt:
-        name: kubeadm=1.24.3-00
-        state: present
-
-    - name: generate containerd config
-      shell:
-        cmd: |
-          sudo containerd config default | sudo tee /etc/containerd/config.toml
-          sudo sed -i 's/            SystemdCgroup = false/            SystemdCgroup = true/' /etc/containerd/config.toml
-          sudo systemctl restart containerd
-        chdir: $HOME
-        creates: containerd.txt
-
-    - name: register containerd on startup
-      shell:
-        cmd: |
-          sudo systemctl enable kubelet.service
-          sudo systemctl enable containerd.service
-
-
-- hosts: masters
-  become: yes
-  tasks:
-    - name: install kubectl
-      apt:
-        name: kubectl
-        state: present
-        force: yes
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
