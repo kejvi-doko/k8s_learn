@@ -1,0 +1,9 @@
+- hosts: masters
+  become: yes
+  tasks:
+    - name: Install Calico Pod Network Addon
+      shell:
+        cmd: |
+          kubectl apply -f https://projectcalico.docs.tigera.io/manifests/calico.yaml >> calico_configured.txt
+        chdir: /home/parallels
+        creates: calico_configured.txt

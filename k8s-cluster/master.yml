@@ -8,11 +8,17 @@
         creates: cluster_initialized.txt
 
     - name: create .kube directory
-      shell:
-        cmd: |
-          mkdir -p .kube
-          sudo cp -i /etc/kubernetes/admin.conf .kube/config
-          sudo chown $(id -u):$(id -g) .kube/config
-        chdir: /home/parallels
-        creates: .kube/config
+      become: yes
+      become_user: parallels
+      file:
+        path: $HOME/.kube
+        state: directory
+        mode: 0755
+
+    - name: copy admin.conf to user's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/parallels/.kube/config
+        remote_src: yes
+        owner: parallels
         

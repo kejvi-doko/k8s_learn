@@ -42,12 +42,13 @@
         line: '            SystemdCgroup = true'
 
     - name: Restart and Enable Containerd
-      shell: |
-        sudo systemctl restart containerd
-        sudo systemctl enable containerd
-        touch containerd_restarted.txt
-      chdir: /home/parallels
-      creates: containerd_restarted.txt
+      shell:
+        cmd: |
+          sudo systemctl restart containerd
+          sudo systemctl enable containerd
+          touch containerd_restarted.txt
+        chdir: /home/parallels
+        creates: containerd_restarted.txt
 
     - name: Install required packaged
       apt:
