@@ -1,9 +1,9 @@
 [masters]
-master ansible_host=k8s-01
+master ansible_host=k8s01
 
 [workers]
-worker1 ansible_host=k8s-02
-worker2 ansible_host=k8s-03
+worker1 ansible_host=k8s02
+worker2 ansible_host=k8s03
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3

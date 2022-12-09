@@ -2,6 +2,8 @@
   become: yes
   tasks:
     - name: Install Calico Pod Network Addon
+      become: true
+      become_user: parallels
       shell:
         cmd: |
           kubectl apply -f https://projectcalico.docs.tigera.io/manifests/calico.yaml >> calico_configured.txt
